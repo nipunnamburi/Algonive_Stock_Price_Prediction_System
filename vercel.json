@@ -1,5 +1,5 @@
 {
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.py" }
-  ]
-}
+      "rewrites": [
+        { "source": "/api/(.*)", "destination": "https://stock-prediction-system.onrender.com/api/$1" }
+      ]
+    }
