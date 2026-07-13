@@ -1,0 +1,16 @@
+# Exclude local virtual environment and package folders from upload
+venv/
+node_modules/
+.next/
+next_temp/
+
+# Exclude caches and system files
+__pycache__/
+.ipynb_checkpoints/
+.vscode/
+.DS_Store
+*.pyc
+
+# Exclude large local scrip datasets (1600+ files) to keep function bundle under 500MB.
+# In production on Vercel, the app will fall back to online yfinance fetches for scrips.
+Datasets/SCRIP/
