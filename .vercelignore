@@ -1,15 +1,28 @@
-# Exclude local virtual environment and package folders from upload
-venv
-node_modules
-.next
-next_temp
-
-# Exclude caches and system files
-__pycache__
-.ipynb_checkpoints
-.vscode
-.DS_Store
+# Python
+venv/
+__pycache__/
 *.pyc
+.ipynb_checkpoints/
 
-# Exclude large local scrip datasets (1600+ files)
-Datasets/SCRIP
+# Node
+node_modules/
+.next/
+
+# IDE
+.vscode/
+.DS_Store
+
+# ML
+Datasets/
+models/
+notebooks/
+
+# Model files
+*.h5
+*.keras
+*.pkl
+*.joblib
+*.csv
+
+# Git
+.git/
