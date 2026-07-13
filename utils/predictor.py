@@ -1,9 +1,9 @@
 import os
 import numpy as np
+from keras.models import load_model
 import pandas as pd
 import joblib
 from sklearn.preprocessing import MinMaxScaler
-from keras.models import load_model
 from typing import Tuple, List
 
 # Define directories

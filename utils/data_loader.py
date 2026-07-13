@@ -1,5 +1,4 @@
 import os
-import yfinance as yf
 import pandas as pd
 from datetime import datetime
 from typing import Tuple, List, Dict
@@ -219,6 +218,7 @@ def load_historical_data(ticker_symbol: str, start_date: datetime, end_date: dat
             
     # Online fallback
     try:
+        import yfinance as yf
         df = yf.download(ticker_symbol, start=start_date, end=end_date, auto_adjust=False, threads=False)
         if df.empty:
             return pd.DataFrame()
@@ -262,6 +262,7 @@ def load_company_info(ticker_symbol: str) -> dict:
         }
         
     try:
+        import yfinance as yf
         ticker = yf.Ticker(ticker_symbol)
         info = ticker.info
         
