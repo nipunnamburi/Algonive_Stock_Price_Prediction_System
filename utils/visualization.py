@@ -3,7 +3,7 @@ import plotly.express as px
 import pandas as pd
 import numpy as np
 
-def plot_historical_prices(df: pd.DataFrame, ticker: str) -> go.Figure:
+def plot_historical_prices(df: pd.DataFrame, ticker: str, currency_symbol: str = "$") -> go.Figure:
     """
     Creates an interactive line chart showing close prices, SMA 20, SMA 50, and EMA 20.
     """
@@ -43,7 +43,7 @@ def plot_historical_prices(df: pd.DataFrame, ticker: str) -> go.Figure:
     fig.update_layout(
         title=f"Historical Price Analysis for {ticker}",
         xaxis_title="Date",
-        yaxis_title="Price ($)",
+        yaxis_title=f"Price ({currency_symbol})",
         template="plotly_dark",
         hovermode="x unified",
         margin=dict(l=20, r=20, t=50, b=20),
@@ -74,7 +74,7 @@ def plot_volume(df: pd.DataFrame, ticker: str) -> go.Figure:
     
     return fig
 
-def plot_forecast(historical_df: pd.DataFrame, forecast_prices: list, ticker: str) -> go.Figure:
+def plot_forecast(historical_df: pd.DataFrame, forecast_prices: list, ticker: str, currency_symbol: str = "$") -> go.Figure:
     """
     Plots historical close prices followed by forecasted prices, separated by a vertical line.
     """
@@ -118,7 +118,7 @@ def plot_forecast(historical_df: pd.DataFrame, forecast_prices: list, ticker: st
     fig.update_layout(
         title=f"Historical & Forecasted Price Trend for {ticker}",
         xaxis_title="Date",
-        yaxis_title="Price ($)",
+        yaxis_title=f"Price ({currency_symbol})",
         template="plotly_dark",
         hovermode="x unified",
         margin=dict(l=20, r=20, t=50, b=20),

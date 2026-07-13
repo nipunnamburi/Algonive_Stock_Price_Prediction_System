@@ -7,7 +7,8 @@ from keras.models import load_model
 from typing import Tuple, List
 
 # Define directories
-MODELS_DIR = '/Users/nipunnamburi/Downloads/Algonive Internship/StockPricePredictionSystem/models'
+base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MODELS_DIR = os.path.join(base_dir, 'models')
 MODEL_PATH = os.path.join(MODELS_DIR, 'lstm_model.keras')
 SCALER_PATH = os.path.join(MODELS_DIR, 'scaler.pkl')
 
@@ -81,6 +82,9 @@ def calculate_evaluation_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Tupl
     """
     Calculates regression evaluation metrics: RMSE, MAE, MAPE, and Accuracy.
     """
+    if len(y_true) == 0 or len(y_pred) == 0:
+        return 0.0, 0.0, 0.0, 0.0
+        
     y_true = y_true.flatten()
     y_pred = y_pred.flatten()
     
@@ -99,8 +103,19 @@ def get_test_predictions(model, scaler, dataset: np.ndarray, training_data_len: 
     """
     Recreates the test slice predictions to evaluate performance metrics.
     """
+    if len(dataset) < 61:
+        return np.array([]), np.array([])
+        
+    if training_data_len >= len(dataset):
+        training_data_len = len(dataset) - 1
+        
+    start_idx = training_data_len - 60
+    if start_idx < 0:
+        start_idx = 0
+        training_data_len = 60
+        
     scaled_data = scaler.transform(dataset)
-    test_data = scaled_data[training_data_len - 60:, :]
+    test_data = scaled_data[start_idx:, :]
     
     x_test = []
     y_test = dataset[training_data_len:, :]
@@ -108,9 +123,13 @@ def get_test_predictions(model, scaler, dataset: np.ndarray, training_data_len: 
         x_test.append(test_data[i-60:i, 0])
         
     x_test = np.array(x_test)
+    if len(x_test) == 0:
+        return np.array([]), np.array([])
+        
     x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[1], 1))
     
     predictions_scaled = model.predict(x_test, verbose=0)
     predictions = scaler.inverse_transform(predictions_scaled)
     
-    return y_test, predictions
+    min_len = min(len(y_test), len(predictions))
+    return y_test[:min_len], predictions[:min_len]
