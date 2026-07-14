@@ -13,16 +13,12 @@ out/
 build/
 
 # ML
-Datasets/
-models/
 notebooks/
 
 # Model files
 *.h5
 *.keras
-*.pkl
 *.joblib
-*.csv
 
 # Environment
 .env
