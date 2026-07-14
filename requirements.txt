@@ -1,7 +1,6 @@
 fastapi
 uvicorn
-tensorflow
-keras
+onnxruntime
 numpy
 pandas
 scikit-learn

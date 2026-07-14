@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from keras.models import load_model
+import onnxruntime as ort
 import pandas as pd
 import joblib
 from sklearn.preprocessing import MinMaxScaler
@@ -9,17 +9,17 @@ from typing import Tuple, List
 # Define directories
 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODELS_DIR = os.path.join(base_dir, 'models')
-MODEL_PATH = os.path.join(MODELS_DIR, 'lstm_model.keras')
+MODEL_PATH = os.path.join(MODELS_DIR, 'lstm_model.onnx')
 SCALER_PATH = os.path.join(MODELS_DIR, 'scaler.pkl')
 
-def get_model_and_scaler(symbol: str, close_prices: np.ndarray) -> Tuple[any, MinMaxScaler]:
+def get_model_and_scaler(symbol: str, close_prices: np.ndarray) -> Tuple[ort.InferenceSession, MinMaxScaler]:
     """
-    Loads the trained LSTM model and returns the appropriate scaler.
+    Loads the trained LSTM model (ONNX session) and returns the appropriate scaler.
     If the stock is AAPL, loads the pre-fitted scaler.
     Otherwise, fits a new MinMaxScaler on the stock's historical close prices.
     """
-    # Load model (forced on CPU)
-    model = load_model(MODEL_PATH)
+    # Load model ONNX session (forced on CPU)
+    session = ort.InferenceSession(MODEL_PATH, providers=['CPUExecutionProvider'])
     
     if symbol.upper() == 'AAPL' and os.path.exists(SCALER_PATH):
         scaler = joblib.load(SCALER_PATH)
@@ -27,9 +27,18 @@ def get_model_and_scaler(symbol: str, close_prices: np.ndarray) -> Tuple[any, Mi
         scaler = MinMaxScaler(feature_range=(0, 1))
         scaler.fit(close_prices.reshape(-1, 1))
         
-    return model, scaler
+    return session, scaler
 
-def predict_next_day(model, scaler, last_60_days: np.ndarray) -> Tuple[float, float]:
+def run_inference(session: ort.InferenceSession, x_input: np.ndarray) -> np.ndarray:
+    """
+    Runs inference using the ONNX model session.
+    """
+    input_name = session.get_inputs()[0].name
+    output_name = session.get_outputs()[0].name
+    x_input_f32 = x_input.astype(np.float32)
+    return session.run([output_name], {input_name: x_input_f32})[0]
+
+def predict_next_day(model: ort.InferenceSession, scaler, last_60_days: np.ndarray) -> Tuple[float, float]:
     """
     Predicts the stock price for the next trading day.
     Returns: (predicted_price, expected_growth_pct)
@@ -40,8 +49,8 @@ def predict_next_day(model, scaler, last_60_days: np.ndarray) -> Tuple[float, fl
     # Reshape for LSTM: (batch_size, timesteps, features) -> (1, 60, 1)
     x_input = np.reshape(scaled_input, (1, len(scaled_input), 1))
     
-    # Predict
-    predicted_scaled = model.predict(x_input, verbose=0)
+    # Predict using ONNX
+    predicted_scaled = run_inference(model, x_input)
     
     # Inverse scale
     predicted_price = float(scaler.inverse_transform(predicted_scaled)[0, 0])
@@ -52,7 +61,7 @@ def predict_next_day(model, scaler, last_60_days: np.ndarray) -> Tuple[float, fl
     
     return predicted_price, growth_pct
 
-def generate_multistep_forecast(model, scaler, last_60_days: np.ndarray, forecast_days: int) -> List[float]:
+def generate_multistep_forecast(model: ort.InferenceSession, scaler, last_60_days: np.ndarray, forecast_days: int) -> List[float]:
     """
     Generates a multi-step autoregressive forecast for N days using the LSTM.
     """
@@ -65,8 +74,8 @@ def generate_multistep_forecast(model, scaler, last_60_days: np.ndarray, forecas
         x_input = np.array(current_sequence[-60:])
         x_input = np.reshape(x_input, (1, 60, 1))
         
-        # Predict next scaled price
-        pred_scaled = model.predict(x_input, verbose=0)[0, 0]
+        # Predict next scaled price using ONNX
+        pred_scaled = run_inference(model, x_input)[0, 0]
         predictions_scaled.append(pred_scaled)
         
         # Append to sequence
@@ -99,7 +108,7 @@ def calculate_evaluation_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Tupl
     
     return rmse, mae, mape, accuracy
 
-def get_test_predictions(model, scaler, dataset: np.ndarray, training_data_len: int) -> Tuple[np.ndarray, np.ndarray]:
+def get_test_predictions(model: ort.InferenceSession, scaler, dataset: np.ndarray, training_data_len: int) -> Tuple[np.ndarray, np.ndarray]:
     """
     Recreates the test slice predictions to evaluate performance metrics.
     """
@@ -128,7 +137,8 @@ def get_test_predictions(model, scaler, dataset: np.ndarray, training_data_len: 
         
     x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[1], 1))
     
-    predictions_scaled = model.predict(x_test, verbose=0)
+    # Predict using ONNX
+    predictions_scaled = run_inference(model, x_test)
     predictions = scaler.inverse_transform(predictions_scaled)
     
     min_len = min(len(y_test), len(predictions))
