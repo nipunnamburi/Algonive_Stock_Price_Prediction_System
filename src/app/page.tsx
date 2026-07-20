@@ -269,9 +269,55 @@ export default function Home() {
 
   // Load historical automatically on click of Load Button or when ticker loaded
   useEffect(() => {
-    if (getActiveTicker()) {
-      handleLoadData();
-    }
+    let active = true;
+    const ticker = getActiveTicker();
+    if (!ticker) return;
+
+    const load = async () => {
+      try {
+        setLoadingData(true);
+        setErrorMsg(null);
+        setPredictionData(null);
+        setPredictErrorMsg(null);
+
+        const res = await fetch("/api/historical", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ticker: ticker,
+            start_date: startDate,
+            end_date: endDate
+          })
+        });
+
+        if (!active) return;
+
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.detail || "Failed to fetch stock data.");
+        }
+
+        const data = await res.json();
+        setCompanyInfo(data.company_info);
+        setHistoricalData(data.historical_data);
+      } catch (err: any) {
+        if (active) {
+          setHistoricalData([]);
+          setCompanyInfo(null);
+          setErrorMsg(err.message || "An unexpected error occurred.");
+        }
+      } finally {
+        if (active) {
+          setLoadingData(false);
+        }
+      }
+    };
+
+    load();
+
+    return () => {
+      active = false;
+    };
   }, [startDate, endDate, selectedTicker, customTickerInput, selectionMode]);
 
   // Formatter helpers
